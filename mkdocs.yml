@@ -1,0 +1,17 @@
+site_name: legibly
+site_url: https://hyunjuuseo.github.io/oss-teamproject
+theme:
+  name: material
+nav:
+  - Home: index.md
+  - Proposal: proposal.md
+  - Team rules: team-rules.md
+  - API: api.md
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
