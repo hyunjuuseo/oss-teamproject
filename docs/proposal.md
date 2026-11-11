@@ -1,60 +1,163 @@
-# 프로젝트 제안서(Project proposal): "프로젝트 이름(Project name)"
+# 프로젝트 제안서(Project proposal): "필기 가독성 복원기 (Handwriting Readability Restorer)"
+
+> 이 제안서는 현재 계획을 기준으로 작성되었습니다. 개발 과정에서 기능, 범위, 사용 기술 등에 변경 사항이 생기면 이 문서를 수정하여 반영하겠습니다.
 
 ## 1. 프로젝트 주제(Project topic)
 
 ### 만들고 싶은 프로그램(What we want to build)
 
-> 어떤 프로그램을 개발할지 한두 문장으로 설명. (Describe the program you want to build in one or two sentences.)
-
-> 예시(Example): 비디오에 등장하는 사람의 얼굴을 검출하고, 검출한 얼굴 영역을 흐리게 처리한 새 영상을 저장하는 Python 패키지를 개발.
-> (We will build a Python package that detects faces in a video, blurs the detected face regions, and saves a new video.)
+사용자가 촬영하거나 저장한 손글씨 이미지를 분석하여, 읽기 쉽게 정돈된 디지털 텍스트로 변환하는 Python 패키지 `legibly`를 만듭니다.
+이미지 전처리(기울기·명암 보정) → 글자 영역 분석 → 손글씨 OCR → 줄바꿈·문단 정리 순서로 처리하며, 인식이 불확실한 부분은 따로 표시하여 사용자가 직접 확인할 수 있게 합니다.
 
 ### 사용자 정의 및 해결할 문제(Users and problem)
 
-> 누가, 어떤 상황에서 이 프로그램을 사용하는가? 사용자가 겪는 문제와 이 프로그램이 필요한 이유를 설명. (Explain who will use the program, when they will use it, and what problem it will help them solve.)
+- **사용자**: 수업 필기나 개인 메모를 디지털로 정리하려는 대학생 및 메모 사용자.
+- **문제**: 강의 중이나 급한 상황에서 작성한 손글씨는 글씨가 흐트러지거나 기울어져 있고, 사진으로 찍으면 그림자·조명 때문에 더 읽기 어려워집니다. 이를 다시 타이핑하려면 시간이 오래 걸리고, 일반 OCR 도구는 인식이 틀린 곳을 알려 주지 않아 오류를 찾기 어렵습니다.
+- **목표**: 손글씨 이미지 한 장을 넣으면, 정돈된 텍스트와 함께 "확인이 필요한 부분"을 알려 주어 정리 시간을 줄입니다.
 
-> 예시(Example): 동아리 소개 영상을 만드는 학생은 촬영된 사람의 얼굴을 가리기 위해 영상 편집기에서 같은 작업을 반복. 이 프로그램은 검출한 얼굴에 블러를 적용해 반복 편집 작업을 줄여 준다.
-> (Students making club introduction videos repeatedly cover faces in a video editor. This program will reduce that repetitive editing by applying blur to detected faces.)
+---
 
 ## 2. 개발할 기능(Planned features)
 
 ### 입력(Input)
 
-> 사용자가 제공하는 데이터와 형식 정의 (Describe the data users will provide and its format.)
+| 항목 | 내용 |
+|------|------|
+| 파일 형식 | `.jpg`, `.jpeg`, `.png` (대소문자 구분 없음) |
+| 입력 방식 | 파일 경로 1개 (명령줄 인자 또는 Python 함수 인자) |
+| 크기 제한 | 파일 크기 10MB 이하, 짧은 변 기준 300px 이상 (예정값, 개발 중 조정 가능) |
+| 내용 | 한 장에 한 페이지 분량의 손글씨 (한글·영문·숫자) |
+| 선택 옵션 | 출력 경로 `--output`, 불확실 판정 기준 `--threshold` (기본값 0.6) |
 
-> 예시(Example): 사용자가 컴퓨터에 저장한 MP4 영상 파일을 입력
-> (The user provides an MP4 video file stored on their computer.)
+**입력 파일명 예시**: `lecture.png`, `memo_2026-11-11.jpg`, `samples/notes_page1.jpeg`
 
 ### 처리(Processing)
 
-> 입력을 받은 뒤 프로그램이 수행할 구체적인 작업을 정의. “AI로 처리한다”처럼 모호하게 쓰지 말고, 실제로 개발할 동작을 설명.> (List the specific tasks program will perform. Explain the behavior you will implement rather than using vague descriptions such as “process it with AI.”)
+1. **입력 확인**
+   - 파일이 존재하는지, 확장자가 `.jpg/.jpeg/.png`인지, 실제로 열 수 있는 이미지인지, 크기 제한을 만족하는지 확인합니다.
+   - 조건을 만족하지 않으면 처리를 중단하고 원인을 알려 주는 오류를 발생시킵니다. (아래 [예외 처리](#예외-처리) 참고)
+2. **전처리**
+   - 이미지를 흑백으로 변환합니다.
+   - 명암 차이 보정: 그림자·조명 불균형을 줄이기 위해 대비를 높이고(예: CLAHE), 적응형 이진화를 적용합니다.
+   - 기울기 보정: 글자 줄의 기울어진 각도를 추정하여(예: 최소 외접 사각형 또는 Hough 변환) 이미지를 수평으로 회전합니다.
+   - 작은 잡음(점, 얼룩)을 제거합니다.
+3. **영역 분할**
+   - 전처리된 이미지에서 텍스트 줄 단위 영역을 찾고, 각 영역의 위치(좌표 상자)를 기록합니다.
+   - 위에서 아래, 왼쪽에서 오른쪽 순서로 정렬하여 읽기 순서를 정합니다.
+4. **손글씨 OCR**
+   - 각 영역에 OCR 엔진을 적용하여 텍스트와 신뢰도(0~1)를 얻습니다.
+   - OCR 엔진 후보: EasyOCR(한글 지원), Tesseract. 초기 실험으로 정확도를 비교한 뒤 하나를 선택합니다.
+5. **가독성 정리**
+   - 줄 사이 간격을 기준으로 줄바꿈과 문단을 구분합니다. (간격이 평균보다 크면 새 문단)
+   - 불필요한 공백·중복 공백을 정리하고, 줄 끝에서 끊긴 단어를 이어 붙입니다.
+   - 글머리 기호(`-`, `•`, `1.`)로 시작하는 줄은 목록 형태로 유지합니다.
+6. **불확실 영역 표시**
+   - 신뢰도가 기준값(`threshold`, 기본 0.6)보다 낮은 텍스트는 본문에서 `[?텍스트?]` 형태로 표시합니다.
+   - 해당 영역의 위치(좌표), 인식된 텍스트, 신뢰도를 별도 결과 파일에 저장합니다.
+7. **결과 저장**
+   - 정리된 텍스트와 불확실 영역 목록을 파일로 저장합니다. **원본 이미지는 수정하거나 덮어쓰지 않습니다.**
 
-> 예시(Example):
-> 1. 입력 영상을 프레임별로 읽기(Read the input video frame by frame).
-> 2. 각 프레임에서 사람의 얼굴 영역을 검출(Detect human face regions in each frame).
-> 3. 검출한 얼굴 영역에 블러를 적용(Apply blur to the detected face regions).
-> 4. 처리한 프레임을 순서대로 연결해 새 MP4 영상으로 저장(Save the processed frames in order as a new MP4 video).
+#### 예외 처리
+
+| 상황 | 동작 |
+|------|------|
+| 파일이 없음 | `FileNotFoundError` 발생, 찾지 못한 경로 안내 |
+| 지원하지 않는 확장자 (`.gif`, `.pdf` 등) | `ValueError` 발생, 지원 형식 목록 안내 |
+| 확장자는 맞지만 손상되었거나 이미지가 아닌 파일 | `ValueError` 발생, 이미지를 읽을 수 없다고 안내 |
+| 크기 제한 초과 또는 너무 작은 이미지 | `ValueError` 발생, 허용 범위 안내 |
+| 글자를 하나도 찾지 못함 | 오류 없이 빈 텍스트 파일 생성 + 경고 메시지 출력 |
+| 출력 파일이 이미 존재 | 덮어쓰지 않고 `_1`, `_2` 등을 붙여 새 파일로 저장 |
+| `threshold`가 0~1 범위를 벗어남 | `ValueError` 발생 |
 
 ### 결과(Output)
 
-> 사용자가 받게 될 결과물이 무엇인지 설명. 파일이라면 형식과 주요 특징도 기술. (Describe the result users will receive. If it is a file, specify its format and main characteristics.)
+| 파일 | 내용 |
+|------|------|
+| `<이름>_notes.txt` | 줄바꿈·문단이 정돈된 텍스트 (UTF-8). 불확실한 부분은 `[?텍스트?]`로 표시 |
+| `<이름>_uncertain.json` | 불확실 영역 목록: 줄 번호, 좌표, 인식된 텍스트, 신뢰도 |
 
-> 예시(Example): 검출한 얼굴이 흐리게 처리된 새 MP4 파일을 저장. 원본은 보존하며, 결과 영상은 원본과 같은 해상도와 재생 속도(fps)를 유지. 이번 개발 범위에서는 오디오를 포함하지 않는다.
-> (The program saves a new MP4 file with detected faces blurred. It preserves the original file and keeps the original resolution and frame rate. Audio is outside the scope of this project.)
+- 기본 저장 위치는 입력 이미지와 같은 폴더이며, `--output`으로 바꿀 수 있습니다.
+- 실행이 끝나면 터미널에 처리 요약(인식한 줄 수, 불확실 영역 수, 저장 경로)을 출력합니다.
+- 원본 이미지 파일은 그대로 보존됩니다.
+
+**`lecture_uncertain.json` 예시**
+
+```json
+[
+  {"line": 3, "bbox": [120, 340, 610, 392], "text": "엔트로피", "confidence": 0.42},
+  {"line": 7, "bbox": [98, 701, 455, 748], "text": "P(A|B)", "confidence": 0.37}
+]
+```
 
 ### 개발 범위(Scope)
 
-> - 포함할 기능(In scope): <이번 프로젝트에서 구현할 기능 예시>
-> - 제외할 기능(Out of scope): <이번 프로젝트에서 지원하지 않을 기능 예시>
+**포함 범위**
+- 이미지 입력 및 형식·크기 확인
+- 전처리: 기울기 보정, 명암 보정, 잡음 제거
+- 손글씨 OCR을 통한 텍스트 변환
+- 줄바꿈·문단 정리 등 텍스트 가독성 정돈
+- 불확실 영역 표시 및 목록 저장
+- 결과 파일 저장, 명령줄과 Python 함수 두 가지 사용 방식 제공
 
-> 예시(Example):
-> - 포함할 기능(In scope): 저장된 MP4 읽기, 얼굴 검출, 블러 처리, 새 MP4 저장(Reading stored MP4 files, detecting faces, applying blur, and saving a new MP4).
-> - 제외할 기능(Out of scope): 실시간 웹캠 처리, 특정 인물 식별, 오디오 보존(Live webcam processing, identifying specific people, and preserving audio).
-> - 한계(Limitation): 검출하지 못한 얼굴은 블러 처리되지 않을 수 있으므로 결과 영상을 직접 확인해야한다.(Undetected faces may remain visible, so the output video must be checked manually).
+**제외 범위**
+- 음성·영상의 텍스트 변환
+- 여러 페이지 자동 요약
+- 손글씨 이미지 자체를 깨끗한 글씨로 다시 그리기
+- 모든 필체의 100% 완벽한 인식
+- 그림·도표·수식의 구조 인식
+
+**한계**
+- 글씨가 심하게 겹치거나 번진 경우, 그림이나 수식이 섞인 필기에서는 인식률이 낮아질 수 있습니다.
+- 불확실 영역으로 표시된 부분은 사용자가 원본과 비교하여 직접 확인·수정해야 합니다.
+- OCR 정확도는 선택한 OCR 엔진의 성능에 크게 의존합니다.
+
+**완료 기준**
+- `lecture.png` 같은 샘플 이미지 3장 이상에 대해 오류 없이 `.txt`와 `.json` 결과가 생성된다.
+- 잘못된 입력(없는 파일, `.gif`, 손상된 이미지)에 대해 위 표의 오류가 발생하는 테스트가 통과한다.
+- 처리 후 원본 이미지의 내용(해시값)이 바뀌지 않았음을 테스트로 확인한다.
 
 ### 사용 예시(Usage example)
 
-> 사용자가 입력을 준비하고 프로그램을 사용해 결과를 얻는 한 가지 상황을 예시로 설명. 실제 파일이나 실행 결과를 제출할 필요는 없음. (Describe one scenario from preparing the input to receiving the output. You do not need to submit an actual input file or execution result today.)
+**상황**: 대학생이 강의 중 작성한 필기를 스마트폰으로 찍어 `lecture.png`로 저장했습니다. 사진은 약간 기울어져 있고 한쪽에 그림자가 졌습니다.
 
-> 예시(Example): 학생이 5초 길이의 동아리 소개 영상 `club.mp4`를 입력. 프로그램은 각 프레임에서 검출한 얼굴을 흐리게 처리하고, 무음 영상 `club_blurred.mp4`를 새로 저장. 학생은 결과 영상을 재생하며 얼굴 검출이 누락된 부분이 있는지 확인.
-> (A student provides a five-second club introduction video, `club.mp4`. The program blurs detected faces in each frame and saves a new silent video, `club_blurred.mp4`. The student plays the output and checks for any missed faces.)
+**명령줄에서 실행**
+
+```bash
+legibly lecture.png --output lecture_notes.txt
+```
+
+```text
+[1/7] 입력 확인 ... 완료 (lecture.png, 2480x3508)
+[2/7] 전처리 ... 기울기 3.2° 보정, 명암 보정
+[3/7] 영역 분할 ... 18줄 발견
+[4/7] OCR 인식 ... 완료
+[5/7] 텍스트 정리 ... 문단 4개
+[6/7] 불확실 영역 표시 ... 기준(0.6) 미만 2곳
+[7/7] 저장 완료: lecture_notes.txt, lecture_uncertain.json
+```
+
+**Python에서 사용**
+
+```python
+from legibly import restore
+
+result = restore("lecture.png", threshold=0.6)
+print(result.text)              # 정돈된 텍스트
+print(len(result.uncertain))    # 불확실 영역 수
+result.save("lecture_notes.txt")
+```
+
+**결과 `lecture_notes.txt` 예시**
+
+```text
+정보이론 3주차
+
+- 정보량은 사건의 확률이 낮을수록 커진다.
+- [?엔트로피?]는 정보량의 기댓값이다.
+
+조건부 확률 [?P(A|B)?] = P(A∩B) / P(B)
+```
+
+사용자는 `[?…?]`로 표시된 두 곳만 원본 사진과 비교해 확인하면 되므로, 전체를 다시 타이핑하는 것보다 정리 시간이 크게 줄어듭니다.
+
+> 위 명령어 이름(`legibly`), 함수 이름(`restore`), 출력 화면은 예정된 설계이며 개발 중 바뀔 수 있습니다.
