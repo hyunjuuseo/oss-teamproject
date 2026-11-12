@@ -136,3 +136,21 @@ def format_text(results: list[dict]) -> str:
         and the original reading order.
     """
     raise NotImplementedError
+
+def clean_text(text):
+    """Clean up unnecessary whitespaces and line breaks in the recognized text.
+
+    Args:
+        text (str): Raw text string obtained from handwriting recognition.
+
+    Returns:
+        str: Cleaned and formatted text string.
+
+    Raises:
+        TypeError: If the input is not a string.
+
+    Examples:
+        >>> clean_text("  Hello   World!  \n")
+        'Hello World!'
+    """
+    raise NotImplementedError
