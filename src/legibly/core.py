@@ -114,3 +114,25 @@ def recognize(regions: list[dict]) -> list[dict]:
         The original image must remain unchanged.
     """
     raise NotImplementedError
+
+def format_text(results: list[dict]) -> str:
+    """Format recognized text to improve readability.
+
+    Args:
+        results (list[dict]): OCR recognition results.
+            Each result contains recognized text, bounding box,
+            and confidence score.
+
+    Returns:
+        str: Formatted text with cleaned spaces,
+            organized line breaks, and paragraphs.
+
+    Raises:
+        ValueError: If the recognition results have an invalid format.
+
+    Notes:
+        The function organizes recognized text into readable paragraphs.
+        It removes unnecessary spaces while preserving bullet points
+        and the original reading order.
+    """
+    raise NotImplementedError
