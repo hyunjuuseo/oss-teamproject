@@ -75,3 +75,42 @@ def preprocess_image(image_path: str, output_path: str) -> str:
         noise reduction, contrast enhancement, and deskewing.
     """
     raise NotImplementedError
+
+
+
+def recognize(regions: list[dict]) -> list[dict]:
+    """Recognize handwritten text in segmented image regions.
+
+    Args:
+        regions (list[dict]): List of segmented text regions.
+            Each region contains image data and a bounding box
+            (left, top, right, bottom).
+
+    Returns:
+        list[dict]: Recognition results for each text region.
+            Each result contains:
+            - text (str): Recognized Korean, English, or numeric text.
+            - bbox (list[int]): Coordinates of the text region.
+            - confidence (float): OCR confidence score from 0 to 1.
+            Results are kept in reading order.
+
+    Raises:
+        ValueError: If a text region contains invalid image data.
+        RuntimeError: If the OCR engine fails to recognize text.
+
+    Examples:
+        >>> regions = [
+        ...     {"image": sample_image, "bbox": [10, 20, 200, 60]}
+        ... ]
+        >>> recognize(regions)
+        [{'text': 'Hello', 'bbox': [10, 20, 200, 60],
+          'confidence': 0.95}]
+
+    Notes:
+        The OCR engine will be selected after comparing
+        EasyOCR and Tesseract.
+        Regions with low confidence will be marked during
+        the later text formatting stage.
+        The original image must remain unchanged.
+    """
+    raise NotImplementedError
