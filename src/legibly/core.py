@@ -54,3 +54,24 @@ def grayscale(path, out):
         'clock_gray.png'
     """
     raise NotImplementedError
+
+def preprocess_image(image_path: str, output_path: str) -> str:
+    """
+    Preprocess a handwritten note image to improve readability.
+
+    Args:
+        image_path (str): Path to the input JPG or PNG image.
+        output_path (str): Path to save the preprocessed image.
+
+    Returns:
+        str: Path to the saved preprocessed image.
+
+    Raises:
+        FileNotFoundError: If the input image does not exist.
+        ValueError: If the input image format is not supported.
+
+    Notes:
+        Preprocessing may include grayscale conversion,
+        noise reduction, contrast enhancement, and deskewing.
+    """
+    raise NotImplementedError
