@@ -57,7 +57,7 @@ def grayscale(path, out):
 
 def preprocess_image(image_path: str, output_path: str) -> str:
     """
-    Preprocess a handwritten note image to improve readability.
+    Preprocess a handwritten note image to improve readability and OCR accuracy.
 
     Args:
         image_path (str): Path to the input JPG or PNG image.
