@@ -1,0 +1,21 @@
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legibly"
+version = "0.1.0"
+description = "Helpers for restoring the legibility of messy handwritten notes"
+requires-python = ">=3.9"
+dependencies = [
+    "Pillow>=9.0"
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
