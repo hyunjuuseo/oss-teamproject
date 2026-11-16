@@ -1,5 +1,6 @@
 """Core functions of legibly. (examples for documentation)"""
-
+import numpy as np
+from PIL import Image
 
 def resize(path, width):
     """Resize an image to the given width, keeping its aspect ratio.
