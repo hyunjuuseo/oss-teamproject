@@ -82,7 +82,14 @@ Legibly는 손글씨 이미지의 가독성 개선 및 텍스트 추출을 위�
 TODO: 실제 구현에 사용된 라이브러리의 이름, 버전, 용도 및 라이선스를 정리하고 pyproject.toml의 의존성 목록과 일치시키기.
 
 ## 5. Tests
-TODO
+테스트는 [pytest](https://docs.pytest.org/)로 실행합니다. 저장소를 clone 한 뒤, 저장소 최상위 폴더에서 아래 두 명령을 실행하세요.
+
+```bash
+pip install -e . pytest
+pytest
+```
+
+테스트 파일은 `tests/` 폴더에 모듈마다 하나씩 만들고, 이름은 모듈 이름을 따릅니다. (예: `src/legibly/text.py` → `tests/test_text.py`)
 
 ## 6. Documentation
 Legibly의 프로젝트 설명과 함수별 API 문서는 MkDocs를 통해 제공됩니다.
