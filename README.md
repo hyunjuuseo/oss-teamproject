@@ -89,7 +89,7 @@ pip install -e . pytest
 pytest
 ```
 
-테스트 파일은 `tests/` 폴더에 있으며, 모듈 이름을 따라 `tests/test_core.py`처럼 `test_<모듈명>.py`로 만듭니다.
+테스트 파일은 `tests/` 폴더에 모듈마다 하나씩 만들고, 이름은 모듈 이름을 따릅니다. (예: `src/legibly/text.py` → `tests/test_text.py`)
 
 ## 6. Documentation
 Legibly의 프로젝트 설명과 함수별 API 문서는 MkDocs를 통해 제공됩니다.
